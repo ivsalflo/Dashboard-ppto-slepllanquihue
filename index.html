@@ -95,12 +95,18 @@ body{
   letter-spacing:.005em;margin:0;
 }
 .phead .note{font-size:11.5px;color:var(--faint);text-align:right;max-width:46ch}
+.yctl{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:8px 0 4px}
+.yctl > span{font-family:var(--mono);font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--faint)}
 .legend{display:flex;gap:15px;flex-wrap:wrap;margin:9px 0 2px;
   font-family:var(--mono);font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
 .legend i{display:inline-block;width:16px;height:3px;vertical-align:middle;margin-right:6px;border-radius:1px}
 .duo{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.stack{display:flex;flex-direction:column;gap:18px}
 .duo .panel{margin-bottom:0}
-.chart{width:100%;display:block}
+.chart{display:block}
+.chart-scroll{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
+.chart-scroll::-webkit-scrollbar{height:6px}
+.chart-scroll::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px}
 .chart text{font-family:var(--mono)}
 
 /* ---------- table ---------- */
@@ -120,6 +126,21 @@ tr.tot td{border-top:2px solid var(--ink);border-bottom:0;font-weight:600;paddin
 /* ---------- readings ---------- */
 .readings{margin-top:4px}
 .readings h2{font-family:var(--display);font-weight:600;font-size:14.5px;margin:0 0 12px}
+.subpicker{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0 4px}
+.subpicker button{
+  font-family:var(--body);font-size:11.5px;color:var(--muted);
+  background:var(--panel);border:1px solid var(--line);border-radius:14px;
+  padding:5px 12px;cursor:pointer;transition:background .13s,color .13s,border-color .13s;
+}
+.subpicker button:hover{border-color:var(--faint)}
+.subpicker button[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
+.subpicker button:disabled{opacity:.4;cursor:not-allowed}
+.subpicker .grp{
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--faint);display:flex;align-items:center;padding:0 2px;
+}
+.subEmpty{font-size:12.5px;color:var(--faint);padding:14px 0 4px}
+
 .rd{display:grid;grid-template-columns:26px 1fr;gap:12px;padding:11px 0;border-top:1px solid var(--hair)}
 .rd:first-of-type{border-top:1px solid var(--line)}
 .rd .n{font-family:var(--mono);font-size:10.5px;color:var(--faint);padding-top:2px}
@@ -144,10 +165,20 @@ footer{margin-top:26px;padding-top:12px;border-top:1px solid var(--line);
   .kpis{grid-template-columns:1fr 1fr}
   .duo{grid-template-columns:1fr}
   .masthead h1{font-size:25px}
+  .wrap{padding:18px 14px 44px}
 }
 @media (max-width:520px){
   .kpis{grid-template-columns:1fr}
   .phead .note{text-align:left}
+  .masthead{flex-direction:column;align-items:flex-start;gap:14px}
+  .controls{width:100%;flex-direction:column;align-items:flex-start;gap:12px}
+  .panel{padding:14px 14px 12px}
+  th,td{padding:6px 7px}
+}
+@media (max-width:380px){
+  .masthead h1{font-size:21px}
+  .kpi .val{font-size:21px}
+  .seg button{padding:6px 9px;font-size:11px}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
@@ -186,26 +217,29 @@ footer{margin-top:26px;padding-top:12px;border-top:1px solid var(--line);
       <h2>Cinta de ejecución mensual</h2>
       <div class="note">El área sombreada es la brecha del mes. Ocre cuando se compromete más de lo que se devenga, azul cuando ocurre lo contrario. El eje vertical no parte en cero, para hacer visible la variación mes a mes.</div>
     </div>
+    <div class="yctl"><span>Años a comparar</span><div class="seg" id="yr_cinta"></div></div>
     <div class="legend">
       <span><i style="background:var(--dev)"></i>Devengado</span>
       <span><i style="background:var(--com)"></i>Compromiso</span>
       <span><i style="background:var(--com-soft)"></i>Compromiso por devengar</span>
       <span><i style="background:var(--dev-soft)"></i>Devengo sobre compromiso</span>
     </div>
-    <svg id="cinta" class="chart"></svg>
-    <svg id="brecha" class="chart"></svg>
+    <div class="chart-scroll"><svg id="cinta" class="chart"></svg></div>
+    <div class="chart-scroll"><svg id="brecha" class="chart"></svg></div>
   </section>
 
   <div class="duo">
     <section class="panel">
       <div class="phead"><h2>Estacionalidad del devengo</h2><div class="note">Eje vertical ajustado al rango de los datos.</div></div>
+      <div class="yctl"><span>Años a comparar</span><div class="seg" id="yr_estac"></div></div>
       <div class="legend" id="legAnios"></div>
-      <svg id="estac" class="chart"></svg>
+      <div class="chart-scroll"><svg id="estac" class="chart"></svg></div>
     </section>
     <section class="panel">
       <div class="phead"><h2>Avance acumulado sobre la Ley de Presupuestos</h2><div class="note">Eje vertical ajustado al rango de los datos.</div></div>
+      <div class="yctl"><span>Años a comparar</span><div class="seg" id="yr_acum"></div></div>
       <div class="legend" id="legAnios2"></div>
-      <svg id="acum" class="chart"></svg>
+      <div class="chart-scroll"><svg id="acum" class="chart"></svg></div>
     </section>
   </div>
 
@@ -214,11 +248,8 @@ footer{margin-top:26px;padding-top:12px;border-top:1px solid var(--line);
       <h2>Subtítulos y asignación presupuestaria por programa</h2>
       <div class="note">Elige los años a comparar. Asignación = Ley de Presupuestos inicial del último año seleccionado. Devengado por subtítulo, acumulado a diciembre o al corte elegido arriba.</div>
     </div>
-    <div class="legend" style="margin-bottom:2px">
-      <span style="font-family:var(--mono);font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--faint);margin-right:2px">Años a comparar</span>
-      <div class="seg" id="segYear" style="display:inline-flex"></div>
-    </div>
-    <div class="duo" id="progDetail"></div>
+    <div class="yctl"><span>Años a comparar</span><div class="seg" id="segYear"></div></div>
+    <div class="stack" id="progDetail"></div>
   </section>
 
   <section class="panel">
@@ -226,7 +257,8 @@ footer{margin-top:26px;padding-top:12px;border-top:1px solid var(--line);
       <h2>Composición del devengo por subtítulo</h2>
       <div class="note" id="compNote"></div>
     </div>
-    <svg id="comp" class="chart"></svg>
+    <div class="yctl"><span>Años a comparar</span><div class="seg" id="yr_comp"></div></div>
+    <div class="chart-scroll"><svg id="comp" class="chart"></svg></div>
   </section>
 
   <section class="panel">
@@ -234,12 +266,17 @@ footer{margin-top:26px;padding-top:12px;border-top:1px solid var(--line);
       <h2>Devengo por subtítulo</h2>
       <div class="note" id="tabNote"></div>
     </div>
+    <div class="yctl"><span>Años a comparar</span><div class="seg" id="yr_tabla"></div></div>
     <div style="overflow-x:auto"><table id="tabla"></table></div>
   </section>
 
   <section class="panel readings">
-    <h2>Lecturas del período</h2>
-    <div id="readings"></div>
+    <div class="phead">
+      <h2>Análisis por subtítulo</h2>
+      <div class="note">Elige hasta 3 subtítulos, de cualquier programa, para ver un análisis específico de cada uno.</div>
+    </div>
+    <div id="subPicker" class="subpicker"></div>
+    <div id="subReadings"></div>
   </section>
 
   <footer>
@@ -262,16 +299,53 @@ let PROG = 'ALL';
 let PER  = 'FULL';
 let PYEARS = new Set(ANIOS); // años seleccionados para el comparativo por programa
 
+// Cada gráfico principal tiene su propio conjunto de años a comparar, independiente de los demás.
+let YEARS_CINTA = new Set(ANIOS);
+let YEARS_ESTAC = new Set(ANIOS);
+let YEARS_ACUM  = new Set(ANIOS);
+let YEARS_COMP  = new Set(ANIOS);
+let YEARS_TABLA = new Set(ANIOS);
+let SELECTED_SUBS = new Set(); // claves "PROG|SUBTITULO", máximo 3
+
 /* ---------- utilidades ---------- */
 const MM = v => v/1e6;
 const fmt = (v,d=0)=> v.toLocaleString('es-CL',{minimumFractionDigits:d,maximumFractionDigits:d});
 const pct = (v,d=1)=> fmt(v,d)+'%';
 const maxMes = ()=> PER==='H1' ? 6 : 12;
+const yearsArr = set => ANIOS.filter(a=>set.has(a));
 
-function serie(){
+// Construye (o reconstruye) un control de años de selección múltiple ligado a un Set.
+// Exige al menos un año activo. Se puede llamar en cada render(): reconstruye los botones
+// reflejando el estado actual del Set, y onclick se reasigna sin duplicar listeners.
+function buildYearToggle(containerId, set, onChange){
+  const wrap = document.getElementById(containerId);
+  if(!wrap) return;
+  wrap.innerHTML = '';
+  ANIOS.forEach(a=>{
+    const b = document.createElement('button');
+    b.textContent = a; b.dataset.v = a;
+    b.setAttribute('aria-pressed', set.has(a) ? 'true' : 'false');
+    wrap.appendChild(b);
+  });
+  wrap.onclick = e=>{
+    const b = e.target.closest('button'); if(!b) return;
+    const y = +b.dataset.v;
+    if(set.has(y)){
+      if(set.size<=1) return; // siempre debe quedar al menos un año activo
+      set.delete(y);
+    } else {
+      set.add(y);
+    }
+    b.setAttribute('aria-pressed', set.has(y) ? 'true' : 'false');
+    onChange();
+  };
+}
+
+function serie(yearsSet){
   const m = new Map();
   for(const [a,mes,p,req,com,dev,efe] of DATA.serie){
     if(PROG!=='ALL' && p!==PROG) continue;
+    if(yearsSet && !yearsSet.has(a)) continue;
     const k = a*100+mes;
     const o = m.get(k) || {a,mes,req:0,com:0,dev:0,efe:0};
     o.req+=req; o.com+=com; o.dev+=dev; o.efe+=efe;
@@ -283,10 +357,11 @@ function ley(a){
   const r = DATA.ley[String(a)]||{};
   return PROG==='ALL' ? (r.P01||0)+(r.P02||0) : (r[PROG]||0);
 }
-function subAgg(){ // {anio: {sub: {com,dev}}}
+function subAgg(yearsSet){ // {anio: {sub: {com,dev}}}
   const out = {};
   for(const [a,mes,p,s,com,dev] of DATA.sub){
     if(PROG!=='ALL' && p!==PROG) continue;
+    if(yearsSet && !yearsSet.has(a)) continue;
     if(mes>maxMes()) continue;
     (out[a] = out[a]||{});
     const o = out[a][s] = out[a][s] || {com:0,dev:0};
@@ -313,6 +388,23 @@ function devSubAgg(prog, year){ // {sub:{com,dev}} para un año y programa, resp
   }
   return out;
 }
+
+// Último mes con datos en 2026, para comparar semestres a igual tramo sin depender del corte global.
+const LAST_MONTH_2026 = Math.max(...DATA.serie.filter(r=>r[0]===2026).map(r=>r[1]), 6);
+
+function devFor(prog, sub, year, limMes){ // {com,dev} de un subtítulo puntual, con corte de mes explícito
+  limMes = limMes||12;
+  let com=0, dev=0;
+  for(const [a,m,p,s,c,d] of DATA.sub){
+    if(a===year && p===prog && s===sub && m<=limMes){ com+=c; dev+=d; }
+  }
+  return {com,dev};
+}
+function leyFor(prog, sub, year){ // asignación de un subtítulo puntual
+  let v=0;
+  for(const [a,p,s,val] of DATA.leySub){ if(a===year && p===prog && s===sub) v+=val; }
+  return v;
+}
 function anual(){ // por año, respetando corte
   const out={};
   for(const r of serie()){
@@ -328,7 +420,7 @@ const el = (t,attrs={},txt)=>{
   if(txt!=null) n.textContent = txt;
   return n;
 };
-const W = id => document.getElementById(id).parentNode.clientWidth - 36;
+const W = id => document.getElementById(id).parentNode.clientWidth;
 
 /* ---------- tooltip ---------- */
 const tip = document.getElementById('tip');
@@ -415,12 +507,13 @@ function axisBreak(svg,x,y){
 
 /* ---------- cinta mensual ---------- */
 function cinta(){
-  const s = serie(), svg = document.getElementById('cinta');
+  buildYearToggle('yr_cinta', YEARS_CINTA, cinta);
+  const s = serie(YEARS_CINTA), svg = document.getElementById('cinta');
   svg.innerHTML='';
   const w = Math.max(560,W('cinta')), h = 300;
   const ml=54, mr=10, mt=20, mb=22;
   const iw = w-ml-mr, ih = h-mt-mb;
-  svg.setAttribute('viewBox',`0 0 ${w} ${h}`); svg.setAttribute('height',h);
+  svg.setAttribute('viewBox',`0 0 ${w} ${h}`); svg.setAttribute('height',h); svg.setAttribute('width',w);
 
   const vals = s.flatMap(r=>[r.com,r.dev]);
   const dLo = Math.min(...vals), dHi = Math.max(...vals);
@@ -495,7 +588,7 @@ function brechaChart(s,ml,mr,iw,x){
   const svg = document.getElementById('brecha'); svg.innerHTML='';
   const w = Math.max(560,W('cinta')), h = 84, mt=18, mb=14;
   const ih = h-mt-mb;
-  svg.setAttribute('viewBox',`0 0 ${w} ${h}`); svg.setAttribute('height',h);
+  svg.setAttribute('viewBox',`0 0 ${w} ${h}`); svg.setAttribute('height',h); svg.setAttribute('width',w);
   const vals = s.map(r=>r.com-r.dev);
   const m = Math.max(...vals.map(Math.abs))*1.1 || 1;
   const zero = mt+ih/2;
@@ -521,10 +614,11 @@ function brechaChart(s,ml,mr,iw,x){
 
 /* ---------- estacionalidad ---------- */
 function estac(){
-  const s = serie(), svg = document.getElementById('estac'); svg.innerHTML='';
+  buildYearToggle('yr_estac', YEARS_ESTAC, ()=>{ estac(); legends(); });
+  const s = serie(YEARS_ESTAC), svg = document.getElementById('estac'); svg.innerHTML='';
   const w = Math.max(320,W('estac')), h = 250;
   const ml=52,mr=12,mt=14,mb=24, iw=w-ml-mr, ih=h-mt-mb;
-  svg.setAttribute('viewBox',`0 0 ${w} ${h}`); svg.setAttribute('height',h);
+  svg.setAttribute('viewBox',`0 0 ${w} ${h}`); svg.setAttribute('height',h); svg.setAttribute('width',w);
 
   const vals = s.map(r=>r.dev);
   const dLo=Math.min(...vals), dHi=Math.max(...vals);
@@ -541,7 +635,7 @@ function estac(){
   if(sc.lo>0) axisBreak(svg, ml-6, mt+ih-4);
   for(let m=1;m<=12;m++) svg.appendChild(el('text',{x:x(m),y:h-8,'text-anchor':'middle','font-size':8.5,fill:'var(--faint)'},MES[m]));
 
-  ANIOS.forEach(a=>{
+  yearsArr(YEARS_ESTAC).forEach(a=>{
     const pts = s.filter(r=>r.a===a).sort((p,q)=>p.mes-q.mes);
     if(!pts.length) return;
     svg.appendChild(el('polyline',{points:pts.map(r=>`${x(r.mes)},${y(r.dev)}`).join(' '),
@@ -558,14 +652,15 @@ function estac(){
 
 /* ---------- avance acumulado ---------- */
 function acum(){
-  const s = serie(), svg = document.getElementById('acum'); svg.innerHTML='';
+  buildYearToggle('yr_acum', YEARS_ACUM, ()=>{ acum(); legends(); });
+  const s = serie(YEARS_ACUM), svg = document.getElementById('acum'); svg.innerHTML='';
   const w = Math.max(320,W('acum')), h = 250;
   const ml=46,mr=30,mt=14,mb=24, iw=w-ml-mr, ih=h-mt-mb;
-  svg.setAttribute('viewBox',`0 0 ${w} ${h}`); svg.setAttribute('height',h);
+  svg.setAttribute('viewBox',`0 0 ${w} ${h}`); svg.setAttribute('height',h); svg.setAttribute('width',w);
 
   const curvas = {};
   let pLo=Infinity, pHi=-Infinity;
-  ANIOS.forEach(a=>{
+  yearsArr(YEARS_ACUM).forEach(a=>{
     const L = ley(a); if(!L) return;
     const pts = s.filter(r=>r.a===a).sort((p,q)=>p.mes-q.mes);
     let acc=0; const arr=[];
@@ -592,7 +687,7 @@ function acum(){
   if(lo>0) axisBreak(svg, ml-6, mt+ih-4);
   for(let m=1;m<=12;m++) svg.appendChild(el('text',{x:x(m),y:h-8,'text-anchor':'middle','font-size':8.5,fill:'var(--faint)'},MES[m]));
 
-  ANIOS.forEach(a=>{
+  yearsArr(YEARS_ACUM).forEach(a=>{
     const arr = curvas[a]; if(!arr) return;
     svg.appendChild(el('polyline',{points:arr.map(o=>`${x(o.m)},${y(o.p)}`).join(' '),
       fill:'none',stroke:COL_ANIO[a],'stroke-width':a===2026?2.4:1.5,'stroke-linejoin':'round',opacity:a===2026?1:.85}));
@@ -608,9 +703,8 @@ function acum(){
 }
 
 function legends(){
-  const html = ANIOS.map(a=>`<span><i style="background:${COL_ANIO[a]}"></i>${a}</span>`).join('');
-  document.getElementById('legAnios').innerHTML = html;
-  document.getElementById('legAnios2').innerHTML = html;
+  document.getElementById('legAnios').innerHTML = yearsArr(YEARS_ESTAC).map(a=>`<span><i style="background:${COL_ANIO[a]}"></i>${a}</span>`).join('');
+  document.getElementById('legAnios2').innerHTML = yearsArr(YEARS_ACUM).map(a=>`<span><i style="background:${COL_ANIO[a]}"></i>${a}</span>`).join('');
 }
 
 /* ---------- detalle por programa ---------- */
@@ -668,7 +762,7 @@ function progDetail(){
         <div class="note">Asignación ${lastY}: <b style="color:var(--ink);font-family:var(--mono)">${fmt(MM(totLey))} MM$</b> · ejecutado ${pct(totPct,1)}</div>
       </div>
       <div class="legend" id="legBar_${prog}" style="margin-bottom:4px"></div>
-      <svg class="chart" id="bar_${prog}"></svg>
+      <div class="chart-scroll"><svg class="chart" id="bar_${prog}"></svg></div>
       <div style="overflow-x:auto"><table id="tab_${prog}"></table></div>`;
     host.appendChild(panel);
 
@@ -689,7 +783,7 @@ function barSub(prog, subs, years, leyByY, devByY, lastY){
   const rowH = n*barH + (n-1)*1 + gap*2;
   const w = Math.max(320, W('bar_'+prog)), h = subs.length*rowH + 6;
   const ml = 190, mr = 54, mt = 4;
-  svg.setAttribute('viewBox',`0 0 ${w} ${h}`); svg.setAttribute('height',h);
+  svg.setAttribute('viewBox',`0 0 ${w} ${h}`); svg.setAttribute('height',h); svg.setAttribute('width',w);
   const iw = w-ml-mr;
   const maxV = Math.max(1, ...subs.flatMap(s=> years.map(y=> Math.max(leyByY[y][s]||0, devByY[y][s]?.dev||0))))*1.08;
   const xs = v => v/maxV*iw;
@@ -768,16 +862,18 @@ function tabSub(prog, subs, years, leyByY, devByY, lastY, totLey, totDev){
 
 /* ---------- composición ---------- */
 function comp(){
-  const agg = subAgg(), svg = document.getElementById('comp'); svg.innerHTML='';
+  buildYearToggle('yr_comp', YEARS_COMP, comp);
+  const years = yearsArr(YEARS_COMP);
+  const agg = subAgg(YEARS_COMP), svg = document.getElementById('comp'); svg.innerHTML='';
   const subs = [...new Set(DATA.sub.map(r=>r[3]))]
-    .filter(s=>ANIOS.some(a=>(agg[a]||{})[s]?.dev>0))
+    .filter(s=>years.some(a=>(agg[a]||{})[s]?.dev>0))
     .sort();
-  const w = Math.max(480,W('comp')), rowH = 40, h = ANIOS.length*rowH+38;
+  const w = Math.max(480,W('comp')), rowH = 40, h = years.length*rowH+38;
   const ml=48,mr=10,mt=8;
-  svg.setAttribute('viewBox',`0 0 ${w} ${h}`); svg.setAttribute('height',h);
+  svg.setAttribute('viewBox',`0 0 ${w} ${h}`); svg.setAttribute('height',h); svg.setAttribute('width',w);
   const iw = w-ml-mr;
 
-  ANIOS.forEach((a,ri)=>{
+  years.forEach((a,ri)=>{
     const row = agg[a]||{};
     const tot = subs.reduce((s,k)=>s+(row[k]?.dev||0),0);
     if(!tot) return;
@@ -817,82 +913,117 @@ function comp(){
 
 /* ---------- tabla ---------- */
 function tabla(){
-  const agg = subAgg();
+  buildYearToggle('yr_tabla', YEARS_TABLA, tabla);
+  const years = yearsArr(YEARS_TABLA);
+  const firstY = years[0], lastY = years[years.length-1];
+  const agg = subAgg(YEARS_TABLA);
   const subs = [...new Set(DATA.sub.map(r=>r[3]))]
-    .filter(s=>ANIOS.some(a=>(agg[a]||{})[s]?.dev>0)).sort();
+    .filter(s=>years.some(a=>(agg[a]||{})[s]?.dev>0)).sort();
   const t = document.getElementById('tabla');
-  let html = '<thead><tr><th>Subtítulo</th>'+ANIOS.map(a=>`<th>${a}</th>`).join('')+'<th>Var. 26 / 25</th></tr></thead><tbody>';
+  let html = '<thead><tr><th>Subtítulo</th>'+years.map(a=>`<th>${a}</th>`).join('')+
+    (years.length>1 ? `<th>Var. ${lastY} / ${firstY}</th>` : '')+'</tr></thead><tbody>';
   const totals = {};
   subs.forEach(s=>{
-    const cells = ANIOS.map(a=>{
+    const cells = years.map(a=>{
       const v = (agg[a]||{})[s]?.dev||0;
       totals[a]=(totals[a]||0)+v;
       return `<td>${v? fmt(MM(v)) : '<span style="color:var(--faint)">—</span>'}</td>`;
     }).join('');
-    const v25=(agg[2025]||{})[s]?.dev||0, v26=(agg[2026]||{})[s]?.dev||0;
-    const vr = v25? (v26/v25-1)*100 : null;
-    const vcell = vr===null? '<span style="color:var(--faint)">—</span>'
-      : `<span class="chip ${vr>=0?'up':'down'}">${vr>=0?'+':''}${fmt(vr,1)}%</span>`;
+    let vcell = '';
+    if(years.length>1){
+      const vF=(agg[firstY]||{})[s]?.dev||0, vL=(agg[lastY]||{})[s]?.dev||0;
+      const vr = vF? (vL/vF-1)*100 : null;
+      vcell = `<td>${vr===null? '<span style="color:var(--faint)">—</span>'
+        : `<span class="chip ${vr>=0?'up':'down'}">${vr>=0?'+':''}${fmt(vr,1)}%</span>`}</td>`;
+    }
     const lab = s.slice(0,2)+'  '+s.slice(3).toLowerCase().replace(/(^|\s)\S/g,c=>c.toUpperCase());
-    html += `<tr><td>${lab}</td>${cells}<td>${vcell}</td></tr>`;
+    html += `<tr><td>${lab}</td>${cells}${vcell}</tr>`;
   });
-  const t25=totals[2025]||0, t26=totals[2026]||0;
-  const vt = t25? (t26/t25-1)*100 : 0;
-  html += `<tr class="tot"><td>Total devengado</td>${ANIOS.map(a=>`<td>${fmt(MM(totals[a]||0))}</td>`).join('')}<td><span class="chip ${vt>=0?'up':'down'}">${vt>=0?'+':''}${fmt(vt,1)}%</span></td></tr>`;
-  html += `<tr><td style="color:var(--muted)">Ley de Presupuestos</td>${ANIOS.map(a=>`<td style="color:var(--muted)">${fmt(MM(ley(a)))}</td>`).join('')}<td></td></tr>`;
-  html += `<tr><td style="color:var(--muted)">Avance sobre la Ley</td>${ANIOS.map(a=>`<td style="color:var(--muted)">${ley(a)?pct((totals[a]||0)/ley(a)*100):'—'}</td>`).join('')}<td></td></tr>`;
+  let totVar = '';
+  if(years.length>1){
+    const tF=totals[firstY]||0, tL=totals[lastY]||0;
+    const vt = tF? (tL/tF-1)*100 : 0;
+    totVar = `<td><span class="chip ${vt>=0?'up':'down'}">${vt>=0?'+':''}${fmt(vt,1)}%</span></td>`;
+  }
+  html += `<tr class="tot"><td>Total devengado</td>${years.map(a=>`<td>${fmt(MM(totals[a]||0))}</td>`).join('')}${totVar}</tr>`;
+  html += `<tr><td style="color:var(--muted)">Ley de Presupuestos</td>${years.map(a=>`<td style="color:var(--muted)">${fmt(MM(ley(a)))}</td>`).join('')}${years.length>1?'<td></td>':''}</tr>`;
+  html += `<tr><td style="color:var(--muted)">Avance sobre la Ley</td>${years.map(a=>`<td style="color:var(--muted)">${ley(a)?pct((totals[a]||0)/ley(a)*100):'—'}</td>`).join('')}${years.length>1?'<td></td>':''}</tr>`;
   t.innerHTML = html+'</tbody>';
 
   document.getElementById('tabNote').textContent =
     (PER==='H1'?'Acumulado enero a junio de cada año, en MM$.':'Acumulado anual en MM$. 2026 cubre solo enero a junio.')+
-    ' La variación compara 2026 con el mismo tramo de 2025.';
+    (years.length>1 ? ` La variación compara ${lastY} con ${firstY}.` : '');
 }
 
-/* ---------- lecturas ---------- */
-function readings(){
-  const s = serie();
-  const cut = (y,lim)=> s.filter(r=>r.a===y && r.mes<=lim)
-                         .reduce((o,r)=>({c:o.c+r.com,d:o.d+r.dev}),{c:0,d:0});
-  const H={}, F={};
-  ANIOS.forEach(y=>{ H[y]=cut(y,6); F[y]=cut(y,12); });
-  const avH = y => ley(y)? H[y].d/ley(y)*100 : 0;
-  const avF = y => ley(y)? F[y].d/ley(y)*100 : 0;
-  const brH = y => H[y].c-H[y].d;
-  const brF = y => F[y].c-F[y].d;
-  const subY = (y,pref,lim) => { let v=0; for(const [a,m,p,sb,c,d] of DATA.sub){
-      if(a===y && m<=lim && sb.startsWith(pref) && (PROG==='ALL'||p===PROG)) v+=d; } return v; };
-  const chg = (n,o)=> o? fmt((n/o-1)*100,1)+'%' : 'sin base de comparación';
+/* ---------- análisis por subtítulo (selección libre, máx. 3) ---------- */
+function subLabel(sub){
+  return sub.slice(0,2)+'  '+sub.slice(3).toLowerCase().replace(/(^|\s)\S/g,c=>c.toUpperCase());
+}
+function subList(){ // todas las combinaciones programa+subtítulo con algún dato
+  const seen = new Map();
+  for(const [a,p,s,v] of DATA.leySub){ const k=p+'|'+s; if(!seen.has(k)) seen.set(k,{prog:p,sub:s}); }
+  for(const [a,m,p,s,c,d] of DATA.sub){ const k=p+'|'+s; if(!seen.has(k)) seen.set(k,{prog:p,sub:s}); }
+  return [...seen.values()].sort((x,y)=> x.prog===y.prog ? x.sub.localeCompare(y.sub) : x.prog.localeCompare(y.prog));
+}
+function subPicker(){
+  const host = document.getElementById('subPicker');
+  host.innerHTML = '';
+  let curProg = null;
+  subList().forEach(({prog,sub})=>{
+    if(prog!==curProg){
+      curProg = prog;
+      const g = document.createElement('span'); g.className='grp'; g.textContent = PROG_LABEL[prog].split(' · ')[0];
+      host.appendChild(g);
+    }
+    const key = prog+'|'+sub;
+    const b = document.createElement('button');
+    b.textContent = subLabel(sub);
+    b.setAttribute('aria-pressed', SELECTED_SUBS.has(key) ? 'true' : 'false');
+    if(!SELECTED_SUBS.has(key) && SELECTED_SUBS.size>=3) b.disabled = true;
+    b.addEventListener('click', ()=>{
+      if(SELECTED_SUBS.has(key)){ SELECTED_SUBS.delete(key); }
+      else { if(SELECTED_SUBS.size>=3) return; SELECTED_SUBS.add(key); }
+      subPicker(); subReadings();
+    });
+    host.appendChild(b);
+  });
+}
+function generateSubAnalysis(prog, sub){
+  const cutMes = LAST_MONTH_2026;
+  const v23=devFor(prog,sub,2023,12).dev, v24=devFor(prog,sub,2024,12).dev, v25=devFor(prog,sub,2025,12).dev;
+  const v26 =devFor(prog,sub,2026,cutMes).dev, v25cut=devFor(prog,sub,2025,cutMes).dev;
+  const ley26 = leyFor(prog,sub,2026);
+  const chg = (n,o)=> o? ((n/o-1)*100) : null;
+  const varTot = chg(v25,v23);
+  const varH1  = chg(v26,v25cut);
+  const trend  = varTot===null ? null : (varTot>3 ? 'al alza' : varTot<-3 ? 'a la baja' : 'estable');
+  const pctEj  = ley26? v26/ley26*100 : null;
+  const lab = subLabel(sub);
 
-  const brPrev = [2023,2024,2025].map(brH);
-  const cmpBr = brH(2026) > Math.max(...brPrev)
-    ? 'el valor más alto de la serie para un corte de junio'
-    : 'dentro del rango de los años anteriores a esa misma fecha';
+  let txt = `Dentro de ${PROG_LABEL[prog]}, este subtítulo devengó <b>${fmt(MM(v23))}</b> MM$ en 2023, <b>${fmt(MM(v24))}</b> en 2024 y <b>${fmt(MM(v25))}</b> en 2025`;
+  txt += varTot===null ? '.' : `, una variación de <b>${varTot>=0?'+':''}${fmt(varTot,1)}%</b> entre esos dos años (tendencia ${trend}).`;
+  txt += ` A ${MES[cutMes]} de 2026 lleva <b>${fmt(MM(v26))}</b> MM$`;
+  txt += varH1===null ? '' : `, un <b>${varH1>=0?'+':''}${fmt(varH1,1)}%</b> respecto de igual tramo de 2025`;
+  txt += '.';
+  txt += ley26
+    ? ` La asignación 2026 para este subtítulo es de <b>${fmt(MM(ley26))}</b> MM$, lo que equivale a una ejecución acumulada de <b>${pct(pctEj,1)}</b> a ${MES[cutMes]}.`
+    : ` Este subtítulo no registra asignación explícita en la Ley de Presupuestos 2026.`;
 
-  const d34 = [2023,2024,2025,2026].map(y=>subY(y,'34',6));
-  const d31 = [2023,2024,2025,2026].map(y=>subY(y,'31',6));
-
-  const items = [
-    ['Ejecución',
-     `El devengo de enero a junio 2026 llega a <b>${fmt(MM(H[2026].d))} MM$</b>, un <b>${chg(H[2026].d,H[2025].d)}</b> respecto de igual tramo de 2025, y equivale al <b>${pct(avH(2026))}</b> de la Ley de Presupuestos. Al mismo corte, 2023, 2024 y 2025 iban en <b>${pct(avH(2023))}</b>, <b>${pct(avH(2024))}</b> y <b>${pct(avH(2025))}</b>: el ritmo se mantiene dentro del rango habitual, sin adelanto ni rezago relevante en el gasto agregado.`],
-
-    ['Brecha',
-     `La brecha entre compromiso y devengo se abre durante el primer semestre y se cierra hacia diciembre. Al corte de junio fue de <b>${fmt(MM(brH(2023)))}</b>, <b>${fmt(MM(brH(2024)))}</b> y <b>${fmt(MM(brH(2025)))}</b> MM$ en 2023, 2024 y 2025, mientras que al cierre de cada ejercicio quedó en <b>${fmt(MM(brF(2023)))}</b>, <b>${fmt(MM(brF(2024)))}</b> y <b>${fmt(MM(brF(2025)))}</b> MM$. En junio 2026 alcanza <b>${fmt(MM(brH(2026)))} MM$</b>, ${cmpBr}. Es el indicador que conviene seguir mes a mes, porque anticipa la carga de pago del segundo semestre.`],
-
-    ['Deuda',
-     `El subtítulo 34, servicio de la deuda, se devenga casi íntegramente en el primer semestre y va en <b>${fmt(MM(d34[3]))} MM$</b> en 2026, un <b>${chg(d34[3],d34[2])}</b> por sobre igual tramo de 2025 (2023 y 2024 marcaron <b>${fmt(MM(d34[0]))}</b> y <b>${fmt(MM(d34[1]))}</b> MM$). Es arrastre de obligaciones del ejercicio anterior y consume capacidad de gasto del año en curso.`],
-
-    ['Inversión',
-     `Las iniciativas de inversión, subtítulo 31, pasaron de <b>${fmt(MM(d31[0]))}</b> MM$ en el primer semestre 2023 a <b>${fmt(MM(d31[3]))}</b> MM$ en 2026, con <b>${fmt(MM(d31[1]))}</b> y <b>${fmt(MM(d31[2]))}</b> MM$ en los años intermedios. El presupuesto se concentra cada vez más en operación y personal, con muy poco margen para inversión.`],
-
-    ['Suficiencia del presupuesto inicial',
-     `El devengo anual sobre la Ley de Presupuestos pasó de <b>${pct(avF(2023))}</b> en 2023 a <b>${pct(avF(2024))}</b> en 2024 y <b>${pct(avF(2025))}</b> en 2025. La trayectoria apunta a un presupuesto inicial que se ha vuelto ajustado y que requiere modificaciones durante el ejercicio para cerrar el año.`]
-  ];
-  document.getElementById('readings').innerHTML = items.map((it,i)=>
-    `<div class="rd"><div class="n">${String(i+1).padStart(2,'0')}</div><p><b style="font-family:var(--body);font-weight:600">${it[0]}.</b> ${it[1]}</p></div>`).join('');
+  return {title: PROG_LABEL[prog].split(' · ')[0]+' · '+lab, text: txt};
+}
+function subReadings(){
+  const host = document.getElementById('subReadings');
+  if(SELECTED_SUBS.size===0){
+    host.innerHTML = '<div class="subEmpty">Selecciona al menos un subtítulo arriba para ver su análisis.</div>';
+    return;
+  }
+  const items = [...SELECTED_SUBS].map(k=>{ const [prog,sub]=k.split('|'); return generateSubAnalysis(prog,sub); });
+  host.innerHTML = items.map((it,i)=>
+    `<div class="rd"><div class="n">${String(i+1).padStart(2,'0')}</div><p><b style="font-family:var(--body);font-weight:600">${it.title}.</b> ${it.text}</p></div>`).join('');
 }
 
 /* ---------- render ---------- */
-function render(){ kpis(); cinta(); estac(); acum(); legends(); segYear(); progDetail(); comp(); tabla(); readings(); }
+function render(){ kpis(); cinta(); estac(); acum(); legends(); segYear(); progDetail(); comp(); tabla(); subPicker(); subReadings(); }
 
 document.getElementById('segProg').addEventListener('click',e=>{
   const b = e.target.closest('button'); if(!b) return;
