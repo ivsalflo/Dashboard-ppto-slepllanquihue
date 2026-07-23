@@ -141,31 +141,6 @@ tr.tot td{border-top:2px solid var(--ink);border-bottom:0;font-weight:600;paddin
 }
 .subEmpty{font-size:12.5px;color:var(--faint);padding:14px 0 4px}
 
-/* menú contextual (dropdown) para elegir subtítulos / conceptos */
-.ctxmenu{position:relative;display:inline-block;margin:2px 0 10px}
-.ctxmenu-btn{
-  display:inline-flex;align-items:center;gap:7px;
-  font-family:var(--body);font-size:12.5px;font-weight:500;color:var(--ink);
-  background:var(--panel);border:1px solid var(--line);border-radius:5px;
-  padding:7px 12px;cursor:pointer;transition:border-color .13s,background .13s;
-}
-.ctxmenu-btn:hover{border-color:var(--faint);background:#F5F8FB}
-.ctxmenu-btn .car{font-size:9px;color:var(--faint);transition:transform .15s}
-.ctxmenu[data-open="true"] .ctxmenu-btn .car{transform:rotate(180deg)}
-.ctxmenu-btn .cnt{
-  font-family:var(--mono);font-size:10.5px;color:#fff;background:var(--dev);
-  border-radius:9px;padding:1px 7px;line-height:1.4;
-}
-.ctxmenu-panel{
-  display:none;position:absolute;top:calc(100% + 6px);left:0;z-index:20;
-  width:min(420px,84vw);max-height:340px;overflow-y:auto;
-  background:var(--panel);border:1px solid var(--line);border-radius:6px;
-  box-shadow:0 10px 28px rgba(20,30,40,.16);padding:12px 13px;
-}
-.ctxmenu[data-open="true"] .ctxmenu-panel{display:block}
-.ctxmenu-panel .subpicker{margin:0}
-.ctxmenu-panel .grp:not(:first-child){margin-top:8px}
-
 .rd{display:grid;grid-template-columns:26px 1fr;gap:12px;padding:11px 0;border-top:1px solid var(--hair)}
 .rd:first-of-type{border-top:1px solid var(--line)}
 .rd .n{font-family:var(--mono);font-size:10.5px;color:var(--faint);padding-top:2px}
@@ -262,8 +237,17 @@ footer{margin-top:26px;padding-top:12px;border-top:1px solid var(--line);
 
   <section class="panel">
     <div class="phead">
+      <h2>Devengo por subtítulo</h2>
+      <div class="note" id="tabNote"></div>
+    </div>
+    <div class="yctl"><span>Años a comparar</span><div class="seg" id="yr_tabla"></div></div>
+    <div style="overflow-x:auto"><table id="tabla"></table></div>
+  </section>
+
+  <section class="panel">
+    <div class="phead">
       <h2>Subtítulos y asignación presupuestaria por programa</h2>
-      <div class="note">Elige los años a comparar y, dentro de cada programa, hasta 10 subtítulos y/o conceptos de nivel de cruce 3 a la vez. Asignación = Ley de Presupuestos inicial del último año seleccionado (— cuando el concepto no tiene asignación propia). Devengado acumulado a diciembre o al corte elegido arriba.</div>
+      <div class="note">Elige los años a comparar y, dentro de cada programa, hasta 10 subtítulos. Por cada uno, se despliegan automáticamente sus conceptos de nivel de cruce 3 (cuando existen). Asignación = Ley de Presupuestos inicial del último año seleccionado (— cuando el concepto no tiene asignación propia). Devengado acumulado a diciembre o al corte elegido arriba.</div>
     </div>
     <div class="yctl"><span>Años a comparar</span><div class="seg" id="segYear"></div></div>
     <div class="stack" id="progDetail"></div>
@@ -284,15 +268,6 @@ footer{margin-top:26px;padding-top:12px;border-top:1px solid var(--line);
 
   <section class="panel">
     <div class="phead">
-      <h2>Conceptos presupuestarios (nivel de cruce 3)</h2>
-      <div class="note">Devengado y asignación al mayor detalle que registra el informe SIGFE. La Ley de Presupuestos rara vez llega a este nivel (personal y bienes y servicios se asignan sin desagregar); cuando no hay asignación propia, la columna muestra —.</div>
-    </div>
-    <div class="yctl"><span>Años a comparar</span><div class="seg" id="segYear3"></div></div>
-    <div class="stack" id="concept3Detail"></div>
-  </section>
-
-  <section class="panel">
-    <div class="phead">
       <h2>Composición del devengo por subtítulo</h2>
       <div class="note" id="compNote"></div>
     </div>
@@ -300,14 +275,6 @@ footer{margin-top:26px;padding-top:12px;border-top:1px solid var(--line);
     <div class="chart-scroll"><svg id="comp" class="chart"></svg></div>
   </section>
 
-  <section class="panel">
-    <div class="phead">
-      <h2>Devengo por subtítulo</h2>
-      <div class="note" id="tabNote"></div>
-    </div>
-    <div class="yctl"><span>Años a comparar</span><div class="seg" id="yr_tabla"></div></div>
-    <div style="overflow-x:auto"><table id="tabla"></table></div>
-  </section>
 
   <section class="panel readings">
     <div class="phead">
@@ -769,11 +736,15 @@ function itemCatalog(prog){
     c3: [...c3].sort()
   };
 }
+// Conceptos de nivel de cruce 3 que pertenecen a un subtítulo dado (mismo prefijo de 2 dígitos).
+function childrenFor(prog, subCode){
+  const prefix = subCode.slice(0,2);
+  return itemCatalog(prog).c3.filter(c=>c.slice(0,2)===prefix);
+}
 
 const MAX_ITEMS = 10;
 let SELECTED_ITEMS = {P01: new Set(), P02: new Set()};
 let ITEMS_INIT = {P01:false, P02:false};
-let MENU_OPEN = {P01:false, P02:false};
 
 function ensureDefaultItems(prog){
   if(ITEMS_INIT[prog]) return;
@@ -786,31 +757,23 @@ function itemPicker(prog, containerId){
   const cat = itemCatalog(prog);
   const host = document.getElementById(containerId);
   host.innerHTML = '';
-  const wrap = document.createElement('div');
-  wrap.className = 'subpicker';
-  host.appendChild(wrap);
   const sel = SELECTED_ITEMS[prog];
 
-  const addGroup = (label, codes)=>{
-    const g = document.createElement('span'); g.className='grp'; g.textContent = label;
-    wrap.appendChild(g);
-    codes.forEach(code=>{
-      const b = document.createElement('button');
-      b.textContent = conceptLabel(code);
-      b.setAttribute('aria-pressed', sel.has(code) ? 'true':'false');
-      if(!sel.has(code) && sel.size>=MAX_ITEMS) b.disabled = true;
-      b.addEventListener('click', (e)=>{
-        e.stopPropagation();
-        if(sel.has(code)){ sel.delete(code); }
-        else { if(sel.size>=MAX_ITEMS) return; sel.add(code); }
-        itemPicker(prog, containerId);
-        progDetail();
-      });
-      wrap.appendChild(b);
+  const g = document.createElement('span'); g.className='grp'; g.textContent = 'Subtítulos';
+  host.appendChild(g);
+  cat.subs.forEach(code=>{
+    const b = document.createElement('button');
+    b.textContent = conceptLabel(code);
+    b.setAttribute('aria-pressed', sel.has(code) ? 'true':'false');
+    if(!sel.has(code) && sel.size>=MAX_ITEMS) b.disabled = true;
+    b.addEventListener('click', ()=>{
+      if(sel.has(code)){ sel.delete(code); }
+      else { if(sel.size>=MAX_ITEMS) return; sel.add(code); }
+      itemPicker(prog, containerId);
+      progDetail();
     });
-  };
-  addGroup('Subtítulos', cat.subs);
-  addGroup('Conceptos · nivel de cruce 3', cat.c3);
+    host.appendChild(b);
+  });
 }
 
 function progDetail(){
@@ -824,12 +787,26 @@ function progDetail(){
     const leyByY = {}, devByY = {};
     years.forEach(y=>{ leyByY[y]=combinedLeyFor(prog,y); devByY[y]=combinedDevFor(prog,y); });
 
-    const items = [...SELECTED_ITEMS[prog]]
+    // subtítulos elegidos, con datos en algún año seleccionado
+    const chosenSubs = [...SELECTED_ITEMS[prog]]
       .filter(s=> years.some(y=> (leyByY[y][s]||0)>0 || (devByY[y][s]?.dev||0)>0))
       .sort((a,b)=> (leyByY[lastY][b]||0)-(leyByY[lastY][a]||0) || (devByY[lastY][b]?.dev||0)-(devByY[lastY][a]?.dev||0));
 
-    const totLey = items.reduce((t,s)=>t+(leyByY[lastY][s]||0),0);
-    const totDev = items.reduce((t,s)=>t+(devByY[lastY][s]?.dev||0),0);
+    // por cada subtítulo elegido, se despliegan automáticamente sus conceptos de nivel de cruce 3
+    const items = [];
+    const childSet = new Set();
+    chosenSubs.forEach(subCode=>{
+      items.push(subCode);
+      const children = childrenFor(prog, subCode)
+        .filter(c=> years.some(y=> (leyByY[y][c]||0)>0 || (devByY[y][c]?.dev||0)>0))
+        .sort((a,b)=> (devByY[lastY][b]?.dev||0)-(devByY[lastY][a]?.dev||0));
+      children.forEach(c=>{ items.push(c); childSet.add(c); });
+    });
+    const itemLabel = code => (childSet.has(code)? '↳ ' : '')+conceptLabel(code);
+
+    // los totales se calculan solo sobre los subtítulos (los conceptos son su propio desglose, no se suman aparte)
+    const totLey = chosenSubs.reduce((t,s)=>t+(leyByY[lastY][s]||0),0);
+    const totDev = chosenSubs.reduce((t,s)=>t+(devByY[lastY][s]?.dev||0),0);
     const totPct = totLey? totDev/totLey*100 : 0;
     const pickId = 'itemPicker_'+prog;
 
@@ -838,26 +815,16 @@ function progDetail(){
     panel.innerHTML = `
       <div class="phead">
         <h2>${PROG_LABEL[prog]}</h2>
-        <div class="note">asignación ${lastY}: <b style="color:var(--ink);font-family:var(--mono)">${fmt(MM(totLey))} MM$</b> · ejecutado ${totLey?pct(totPct,1):'—'}</div>
+        <div class="note">${SELECTED_ITEMS[prog].size}/${MAX_ITEMS} subtítulos seleccionados · cada uno despliega automáticamente sus conceptos de nivel de cruce 3 · asignación ${lastY}: <b style="color:var(--ink);font-family:var(--mono)">${fmt(MM(totLey))} MM$</b> · ejecutado ${totLey?pct(totPct,1):'—'}</div>
       </div>
-      <div class="ctxmenu" id="menu_${prog}" data-open="${MENU_OPEN[prog]?'true':'false'}">
-        <button class="ctxmenu-btn" type="button" id="menuBtn_${prog}">
-          Elegir subtítulos y conceptos <span class="cnt">${SELECTED_ITEMS[prog].size}/${MAX_ITEMS}</span> <span class="car">▾</span>
-        </button>
-        <div class="ctxmenu-panel" id="${pickId}"></div>
-      </div>
+      <div class="subpicker" id="${pickId}" style="margin-bottom:10px"></div>
       ${items.length ? `
         <div class="legend" id="legBar_${prog}" style="margin-bottom:4px"></div>
         <div class="chart-scroll"><svg class="chart" id="bar_${prog}"></svg></div>
         <div style="overflow-x:auto"><table id="tab_${prog}"></table></div>`
-      : '<div class="subEmpty">Selecciona al menos un subtítulo o concepto en el menú de arriba.</div>'}`;
+      : '<div class="subEmpty">Selecciona al menos un subtítulo arriba.</div>'}`;
     host.appendChild(panel);
 
-    document.getElementById('menuBtn_'+prog).addEventListener('click', e=>{
-      e.stopPropagation();
-      MENU_OPEN[prog] = !MENU_OPEN[prog];
-      progDetail();
-    });
     itemPicker(prog, pickId);
 
     if(items.length){
@@ -865,8 +832,8 @@ function progDetail(){
         years.map(y=>`<span><i style="background:${COL_ANIO[y]}"></i>${y}</span>`).join('') +
         '<span><i style="background:none;border-bottom:2px dashed var(--faint);height:0;width:14px"></i>Asignación '+lastY+' (cuando existe)</span>';
 
-      barSub(prog, items, years, leyByY, devByY, lastY, '', conceptLabel);
-      tabSub(prog, items, years, leyByY, devByY, lastY, totLey, totDev, 'Subtítulo / concepto', '', conceptLabel);
+      barSub(prog, items, years, leyByY, devByY, lastY, '', itemLabel);
+      tabSub(prog, items, years, leyByY, devByY, lastY, totLey, totDev, 'Subtítulo / concepto', '', itemLabel, childSet);
     }
   });
 }
@@ -917,8 +884,8 @@ function barSub(prog, subs, years, leyByY, devByY, lastY, idPrefix, labelFn){
   });
 }
 
-function tabSub(prog, subs, years, leyByY, devByY, lastY, totLey, totDev, colLabel, idPrefix, labelFn){
-  colLabel = colLabel||'Subtítulo'; idPrefix = idPrefix||''; labelFn = labelFn||defaultSubLabel;
+function tabSub(prog, subs, years, leyByY, devByY, lastY, totLey, totDev, colLabel, idPrefix, labelFn, skipTotal){
+  colLabel = colLabel||'Subtítulo'; idPrefix = idPrefix||''; labelFn = labelFn||defaultSubLabel; skipTotal = skipTotal||new Set();
   const t = document.getElementById(idPrefix+'tab_'+prog);
   const firstY = years[0];
   let html = `<thead><tr><th>${colLabel}</th>`+
@@ -930,7 +897,8 @@ function tabSub(prog, subs, years, leyByY, devByY, lastY, totLey, totDev, colLab
   const totals = {}; years.forEach(y=>totals[y]=0);
   subs.forEach(s=>{
     const cells = years.map(y=>{
-      const dv = devByY[y][s]?.dev||0; totals[y]+=dv;
+      const dv = devByY[y][s]?.dev||0;
+      if(!skipTotal.has(s)) totals[y]+=dv;
       return `<td>${dv? fmt(MM(dv)) : '<span style="color:var(--faint)">—</span>'}</td>`;
     }).join('');
     const lv = leyByY[lastY][s]||0, dvLast = devByY[lastY][s]?.dev||0;
@@ -1014,69 +982,6 @@ function devConcept3For(prog, year){ // {concepto:{com,dev}}, respeta el corte P
     o.com+=com; o.dev+=dev;
   }
   return out;
-}
-
-let PYEARS3 = new Set(ANIOS); // años seleccionados para el detalle de nivel de cruce 3
-
-function segYear3(){
-  const wrap = document.getElementById('segYear3');
-  if(wrap.children.length) return;
-  ANIOS.forEach(a=>{
-    const b = document.createElement('button');
-    b.textContent = a; b.dataset.v = a;
-    b.setAttribute('aria-pressed', PYEARS3.has(a) ? 'true':'false');
-    wrap.appendChild(b);
-  });
-  wrap.addEventListener('click', e=>{
-    const b = e.target.closest('button'); if(!b) return;
-    const y = +b.dataset.v;
-    if(PYEARS3.has(y)){
-      if(PYEARS3.size===1) return;
-      PYEARS3.delete(y);
-    } else {
-      PYEARS3.add(y);
-    }
-    b.setAttribute('aria-pressed', PYEARS3.has(y) ? 'true':'false');
-    concept3Detail();
-  });
-}
-
-function concept3Detail(){
-  const host = document.getElementById('concept3Detail');
-  host.innerHTML = '';
-  const years = ANIOS.filter(a=>PYEARS3.has(a));
-  const lastY = years[years.length-1];
-
-  ['P01','P02'].forEach(prog=>{
-    const leyByY = {}, devByY = {};
-    years.forEach(y=>{ leyByY[y]=leyConcept3For(prog,y); devByY[y]=devConcept3For(prog,y); });
-
-    const concepts = [...new Set(years.flatMap(y=>[...Object.keys(leyByY[y]), ...Object.keys(devByY[y])]))]
-      .filter(c=> years.some(y=> (leyByY[y][c]||0)>0 || (devByY[y][c]?.dev||0)>0))
-      .sort((a,b)=> (devByY[lastY][b]?.dev||0)-(devByY[lastY][a]?.dev||0));
-
-    const totLey = concepts.reduce((t,c)=>t+(leyByY[lastY][c]||0),0);
-    const totDev = concepts.reduce((t,c)=>t+(devByY[lastY][c]?.dev||0),0);
-
-    const panel = document.createElement('section');
-    panel.className = 'panel';
-    panel.innerHTML = `
-      <div class="phead">
-        <h2>${PROG_LABEL[prog]}</h2>
-        <div class="note">${concepts.length} conceptos con movimiento en ${lastY} · devengado: <b style="color:var(--ink);font-family:var(--mono)">${fmt(MM(totDev))}</b> MM$${totLey?` · con asignación propia: ${fmt(MM(totLey))} MM$`:''}</div>
-      </div>
-      <div class="legend" id="legC3_${prog}" style="margin-bottom:4px"></div>
-      <div class="chart-scroll"><svg class="chart" id="c3_bar_${prog}"></svg></div>
-      <div style="overflow-x:auto"><table id="c3_tab_${prog}"></table></div>`;
-    host.appendChild(panel);
-
-    document.getElementById('legC3_'+prog).innerHTML =
-      years.map(y=>`<span><i style="background:${COL_ANIO[y]}"></i>${y}</span>`).join('') +
-      '<span><i style="background:none;border-bottom:2px dashed var(--faint);height:0;width:14px"></i>Asignación '+lastY+' (cuando existe)</span>';
-
-    barSub(prog, concepts, years, leyByY, devByY, lastY, 'c3_', conceptLabel);
-    tabSub(prog, concepts, years, leyByY, devByY, lastY, totLey, totDev, 'Concepto', 'c3_', conceptLabel);
-  });
 }
 
 /* ---------- composición ---------- */
@@ -1246,7 +1151,6 @@ function render(){
   kpis(); cinta(); estac(); legends(); segYear(); progDetail();
   asigBarChart('asigP01','yr_asigP01','P01',YEARS_ASIG_P01);
   asigBarChart('asigP02','yr_asigP02','P02',YEARS_ASIG_P02);
-  segYear3(); concept3Detail();
   comp(); tabla(); subPicker(); subReadings();
 }
 
@@ -1261,18 +1165,6 @@ document.getElementById('segPer').addEventListener('click',e=>{
   PER = b.dataset.v;
   [...e.currentTarget.children].forEach(c=>c.setAttribute('aria-pressed', c===b));
   render();
-});
-document.addEventListener('click', e=>{
-  if(e.target.closest('.ctxmenu')) return;
-  let changed = false;
-  for(const prog of ['P01','P02']) if(MENU_OPEN[prog]){ MENU_OPEN[prog]=false; changed=true; }
-  if(changed) progDetail();
-});
-document.addEventListener('keydown', e=>{
-  if(e.key!=='Escape') return;
-  let changed = false;
-  for(const prog of ['P01','P02']) if(MENU_OPEN[prog]){ MENU_OPEN[prog]=false; changed=true; }
-  if(changed) progDetail();
 });
 let rt; addEventListener('resize',()=>{clearTimeout(rt); rt=setTimeout(render,140);});
 render();
