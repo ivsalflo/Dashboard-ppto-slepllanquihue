@@ -141,6 +141,31 @@ tr.tot td{border-top:2px solid var(--ink);border-bottom:0;font-weight:600;paddin
 }
 .subEmpty{font-size:12.5px;color:var(--faint);padding:14px 0 4px}
 
+/* deep dive por concepto */
+.ddblock{border-top:1px solid var(--line);padding:16px 0 4px}
+.ddblock:first-child{border-top:0;padding-top:4px}
+.ddhead{display:flex;align-items:baseline;gap:10px;margin-bottom:7px}
+.ddhead .n{font-family:var(--mono);font-size:10.5px;color:var(--faint)}
+.ddhead h3{font-family:var(--display);font-weight:600;font-size:13.5px;margin:0}
+.ddintro{margin:0 0 11px;font-size:12.8px;line-height:1.55;color:#2A3844}
+.ddtab{font-size:12px}
+.ddtab th:last-child,.ddtab td:last-child{text-align:left}
+.ddnotes{margin-top:10px;padding-top:9px;border-top:1px solid var(--hair)}
+.ddnotes p{margin:0 0 7px;font-size:12.3px;line-height:1.55;color:#3A4854}
+.ddnotes p:last-child{margin-bottom:0}
+.ddnotes .ddcaveat{margin-top:9px;padding-top:8px;border-top:1px dashed var(--hair);font-size:11.6px;color:var(--faint);font-style:italic}
+.ddnotes b{font-family:var(--mono);font-weight:600;font-size:11.5px;color:var(--ink)}
+.tag{
+  font-family:var(--body);font-size:10.5px;white-space:nowrap;
+  border-radius:3px;padding:2px 6px;border:1px solid transparent;
+}
+.t-sostenido{background:rgba(20,80,110,.10);color:var(--dev);border-color:rgba(20,80,110,.25)}
+.t-puntual{background:rgba(190,134,32,.13);color:#8A6114;border-color:rgba(190,134,32,.3)}
+.t-nuevo{background:rgba(46,107,82,.11);color:var(--ok);border-color:rgba(46,107,82,.28)}
+.t-cesado{background:rgba(156,58,58,.10);color:var(--alert);border-color:rgba(156,58,58,.26)}
+.t-reversas,.t-erratico{background:#EDF0F3;color:var(--muted);border-color:var(--line)}
+.t-estable,.t-moderado,.t-vacio{background:transparent;color:var(--faint)}
+
 .rd{display:grid;grid-template-columns:26px 1fr;gap:12px;padding:11px 0;border-top:1px solid var(--hair)}
 .rd:first-of-type{border-top:1px solid var(--line)}
 .rd .n{font-family:var(--mono);font-size:10.5px;color:var(--faint);padding-top:2px}
@@ -253,19 +278,6 @@ footer{margin-top:26px;padding-top:12px;border-top:1px solid var(--line);
     <div class="stack" id="progDetail"></div>
   </section>
 
-  <div class="duo">
-    <section class="panel">
-      <div class="phead"><h2>Asignación anual · P01</h2><div class="note">Ley de Presupuestos, gastos administrativos.</div></div>
-      <div class="yctl"><span>Años a comparar</span><div class="seg" id="yr_asigP01"></div></div>
-      <div class="chart-scroll"><svg id="asigP01" class="chart"></svg></div>
-    </section>
-    <section class="panel">
-      <div class="phead"><h2>Asignación anual · P02</h2><div class="note">Ley de Presupuestos, servicio educativo.</div></div>
-      <div class="yctl"><span>Años a comparar</span><div class="seg" id="yr_asigP02"></div></div>
-      <div class="chart-scroll"><svg id="asigP02" class="chart"></svg></div>
-    </section>
-  </div>
-
   <section class="panel">
     <div class="phead">
       <h2>Composición del devengo por subtítulo</h2>
@@ -279,7 +291,7 @@ footer{margin-top:26px;padding-top:12px;border-top:1px solid var(--line);
   <section class="panel readings">
     <div class="phead">
       <h2>Análisis por subtítulo</h2>
-      <div class="note">Elige hasta 3 subtítulos, de cualquier programa, para ver un análisis específico de cada uno.</div>
+      <div class="note">Elige hasta 3 subtítulos, de cualquier programa. Se desglosa cada concepto de nivel de cruce 3 y se clasifica su variación según el patrón observable en la serie. Todas las cifras son del tramo enero a junio de cada año, para que 2026 sea comparable.</div>
     </div>
     <div id="subPicker" class="subpicker"></div>
     <div id="subReadings"></div>
@@ -311,10 +323,6 @@ let YEARS_ESTAC = new Set(ANIOS);
 let YEARS_COMP  = new Set(ANIOS);
 let YEARS_TABLA = new Set(ANIOS);
 let SELECTED_SUBS = new Set(); // claves "PROG|SUBTITULO", máximo 3
-
-// Estado de años para los paneles de asignación (Ley de Presupuestos), cada uno independiente.
-let YEARS_ASIG_P01 = new Set(ANIOS);
-let YEARS_ASIG_P02 = new Set(ANIOS);
 
 /* ---------- utilidades ---------- */
 const MM = v => v/1e6;
@@ -926,44 +934,6 @@ function tabSub(prog, subs, years, leyByY, devByY, lastY, totLey, totDev, colLab
   t.innerHTML = html+'</tbody>';
 }
 
-/* ---------- asignación anual por programa ---------- */
-function asigBarChart(svgId, ctrlId, prog, yearsSet){
-  buildYearToggle(ctrlId, yearsSet, ()=>asigBarChart(svgId,ctrlId,prog,yearsSet));
-  const years = yearsArr(yearsSet);
-  const svg = document.getElementById(svgId); svg.innerHTML='';
-  const w = Math.max(300,W(svgId)), h = 230;
-  const ml=54,mr=14,mt=28,mb=26, iw=w-ml-mr, ih=h-mt-mb;
-  svg.setAttribute('viewBox',`0 0 ${w} ${h}`); svg.setAttribute('height',h); svg.setAttribute('width',w);
-
-  const vals = years.map(y=> (DATA.ley[String(y)]||{})[prog]||0 );
-  const lo=Math.min(...vals), hi=Math.max(...vals);
-  const pad = (hi-lo)*0.18 || hi*0.05 || 1;
-  const sc = niceScale(Math.max(0,lo-pad), hi+pad, 5);
-  const y = v => mt+ih-((v-sc.lo)/(sc.hi-sc.lo))*ih;
-  const bw = Math.min(70, iw/years.length*0.46);
-  const x = i => ml + (i+0.5)*iw/years.length;
-
-  gridVals(sc).forEach(v=>{
-    svg.appendChild(el('line',{x1:ml,x2:w-mr,y1:y(v),y2:y(v),stroke:'var(--hair)'}));
-    svg.appendChild(el('text',{x:ml-9,y:y(v)+3.5,'text-anchor':'end','font-size':9,fill:'var(--faint)'},fmt(MM(v))));
-  });
-  if(sc.lo>0) axisBreak(svg, ml-6, mt+ih-4);
-
-  years.forEach((yr,i)=>{
-    const v = vals[i], yy = y(v);
-    const rect = el('rect',{x:x(i)-bw/2,y:yy,width:bw,height:Math.max(1,mt+ih-yy),fill:COL_ANIO[yr],rx:2,opacity:.92});
-    rect.addEventListener('mousemove',e=>showTip(e,String(yr),[['Asignación',fmt(MM(v))+' MM$']]));
-    rect.addEventListener('mouseleave',hideTip);
-    svg.appendChild(rect);
-    svg.appendChild(el('text',{x:x(i),y:yy-7,'text-anchor':'middle','font-size':10,'font-weight':600,fill:'var(--ink)'},fmt(MM(v),0)));
-    svg.appendChild(el('text',{x:x(i),y:h-8,'text-anchor':'middle','font-size':10,fill:'var(--muted)'},yr));
-    if(i>0 && vals[i-1]){
-      const vr = (v/vals[i-1]-1)*100;
-      svg.appendChild(el('text',{x:x(i),y:yy-19,'text-anchor':'middle','font-size':8.5,fill:vr>=0?'var(--alert)':'var(--ok)'}, (vr>=0?'+':'')+fmt(vr,1)+'%'));
-    }
-  });
-}
-
 /* ---------- conceptos presupuestarios (nivel de cruce 3) ---------- */
 function leyConcept3For(prog, year){
   const out = {};
@@ -1080,14 +1050,91 @@ function tabla(){
 }
 
 /* ---------- análisis por subtítulo (selección libre, máx. 3) ---------- */
+/* ---------- diagnóstico por concepto ---------- */
+// Serie mensual de un concepto (o subtítulo) en un año, para un programa.
+function monthlySeries(prog, code, year, isSub){
+  const src = isSub ? DATA.sub : DATA.concept3;
+  const out = new Array(13).fill(0);
+  for(const row of src){
+    const [a,m,p,c] = row;
+    const dev = isSub ? row[5] : row[5];
+    if(a===year && p===prog && c===code) out[m] += dev;
+  }
+  return out;
+}
+function sumTo(arr, lim){ let s=0; for(let m=1;m<=lim;m++) s+=arr[m]; return s; }
+
+// Reúne todo lo observable de un concepto y clasifica la variación.
+// La clasificación describe el PATRÓN en los datos; nunca la causa, que el informe no contiene.
+function diagnose(prog, code, isSub){
+  const cut = LAST_MONTH_2026;
+  const ser = {}; ANIOS.forEach(y=> ser[y] = monthlySeries(prog, code, y, isSub));
+  const h1 = {}, full = {};
+  ANIOS.forEach(y=>{ h1[y] = sumTo(ser[y], cut); full[y] = sumTo(ser[y], 12); });
+
+  const hasNeg = ANIOS.some(y=> ser[y].some(v=> v < 0));
+  // estabilidad de la estacionalidad: participación del tramo ene-cut sobre el año, 2023-2025
+  const shares = [2023,2024,2025].map(y=> full[y]>0 ? h1[y]/full[y]*100 : null).filter(v=>v!==null);
+  const shareRange = shares.length>1 ? Math.max(...shares)-Math.min(...shares) : 0;
+
+  const v = y => h1[y];
+  const chg = (n,o)=> o>0 ? (n/o-1)*100 : null;
+  const var2625 = chg(v(2026), v(2025));
+  const var2523 = chg(v(2025), v(2023));
+
+  const activo = y => v(y) > 0;
+  let tipo, nota;
+  const mag = Math.abs(var2625||0);
+
+  if(!ANIOS.some(y=>v(y)!==0)){
+    tipo='vacio'; nota='sin movimiento en el período.';
+  } else if(!activo(2023) && !activo(2024) && activo(2026)){
+    tipo='nuevo';
+    nota='es una línea que no registraba ejecución en 2023 ni 2024. Un concepto que aparece suele reflejar una reclasificación contable o una actividad nueva; el informe no permite distinguir cuál de las dos.';
+  } else if(activo(2023) && !activo(2025) && !activo(2026)){
+    tipo='cesado';
+    nota='dejó de registrar ejecución. Puede ser cierre de la línea o traspaso a otro concepto; el informe no lo identifica.';
+  } else if(hasNeg){
+    tipo='reversas';
+    nota='registra meses con devengado negativo, es decir reversas o ajustes contables. Con regularizaciones de por medio, la comparación entre años no es concluyente.';
+  } else if(shareRange > 35){
+    tipo='erratico';
+    const fv = (full[2025] && full[2023]) ? (full[2025]/full[2023]-1)*100 : null;
+    nota=`su estacionalidad es inestable: la participación del tramo ene-${MES[cut].toLowerCase()} sobre el año varió ${fmt(shareRange,0)} puntos entre 2023 y 2025, de modo que la comparación a igual corte no es concluyente. `;
+    nota += (fv===null)
+      ? 'Conviene mirar el año completo una vez cerrado 2026.'
+      : `Sobre año completo, que aquí es la lectura más confiable, pasó de <b>${fmt(MM(full[2023]))}</b> a <b>${fmt(MM(full[2025]))}</b> MM$ entre 2023 y 2025 (${fv>=0?'+':''}${fmt(fv,1)}%).`;
+  } else if(var2625!==null && var2523!==null && mag>10 &&
+            Math.sign(var2625)===Math.sign(var2523) && Math.abs(var2523)>10){
+    tipo='sostenido';
+    nota=`el movimiento va en la misma dirección que ya traía entre 2023 y 2025 (${var2523>=0?'+':''}${fmt(var2523,1)}%), con estacionalidad estable. Es el patrón más consistente con un cambio real de nivel, no con un desfase de calendario.`;
+  } else if(mag>40){
+    tipo='puntual';
+    nota='el salto no continúa una tendencia previa y la estacionalidad es estable, lo que apunta a un movimiento puntual del año más que a un cambio de nivel.';
+  } else if(mag<=10){
+    tipo='estable'; nota='se mantiene dentro de su rango habitual.';
+  } else {
+    tipo='moderado'; nota='varía de forma moderada, sin patrón definido en la serie.';
+  }
+  return {code, h1, full, var2625, var2523, tipo, nota, hasNeg, shareRange, mag};
+}
+
+const TIPO_ETIQUETA = {
+  nuevo:'línea nueva', cesado:'línea cesada', reversas:'con reversas',
+  erratico:'estacionalidad inestable', sostenido:'cambio sostenido',
+  puntual:'movimiento puntual', estable:'estable', moderado:'variación moderada', vacio:'sin movimiento'
+};
+
 function subLabel(sub){
   return sub.slice(0,2)+'  '+titleCaseEs(sub.slice(3));
 }
-function subList(){ // todas las combinaciones programa+subtítulo con algún dato
+function subList(){ // combinaciones programa+subtítulo con movimiento real
   const seen = new Map();
-  for(const [a,p,s,v] of DATA.leySub){ const k=p+'|'+s; if(!seen.has(k)) seen.set(k,{prog:p,sub:s}); }
-  for(const [a,m,p,s,c,d] of DATA.sub){ const k=p+'|'+s; if(!seen.has(k)) seen.set(k,{prog:p,sub:s}); }
-  return [...seen.values()].sort((x,y)=> x.prog===y.prog ? x.sub.localeCompare(y.sub) : x.prog.localeCompare(y.prog));
+  for(const [a,p,s,v] of DATA.leySub){ const k=p+'|'+s; if(!seen.has(k)) seen.set(k,{prog:p,sub:s,dev:0,ley:0}); if(v) seen.get(k).ley+=v; }
+  for(const [a,m,p,s,c,dv] of DATA.sub){ const k=p+'|'+s; if(!seen.has(k)) seen.set(k,{prog:p,sub:s,dev:0,ley:0}); seen.get(k).dev+=Math.abs(dv); }
+  return [...seen.values()]
+    .filter(o=> o.dev>0 || o.ley>0)   // descarta combinaciones sin ejecución ni asignación
+    .sort((x,y)=> x.prog===y.prog ? x.sub.localeCompare(y.sub) : x.prog.localeCompare(y.prog));
 }
 function subPicker(){
   const host = document.getElementById('subPicker');
@@ -1112,45 +1159,91 @@ function subPicker(){
     host.appendChild(b);
   });
 }
+
 function generateSubAnalysis(prog, sub){
-  const cutMes = LAST_MONTH_2026;
-  const v23=devFor(prog,sub,2023,12).dev, v24=devFor(prog,sub,2024,12).dev, v25=devFor(prog,sub,2025,12).dev;
-  const v26 =devFor(prog,sub,2026,cutMes).dev, v25cut=devFor(prog,sub,2025,cutMes).dev;
-  const ley26 = leyFor(prog,sub,2026);
-  const chg = (n,o)=> o? ((n/o-1)*100) : null;
-  const varTot = chg(v25,v23);
-  const varH1  = chg(v26,v25cut);
-  const trend  = varTot===null ? null : (varTot>3 ? 'al alza' : varTot<-3 ? 'a la baja' : 'estable');
-  const pctEj  = ley26? v26/ley26*100 : null;
-  const lab = subLabel(sub);
+  const cut = LAST_MONTH_2026;
+  const D = diagnose(prog, sub, true);
+  const ley26 = leyFor(prog, sub, 2026);
+  const pctEj = ley26? D.h1[2026]/ley26*100 : null;
 
-  let txt = `Dentro de ${PROG_LABEL[prog]}, este subtítulo devengó <b>${fmt(MM(v23))}</b> MM$ en 2023, <b>${fmt(MM(v24))}</b> en 2024 y <b>${fmt(MM(v25))}</b> en 2025`;
-  txt += varTot===null ? '.' : `, una variación de <b>${varTot>=0?'+':''}${fmt(varTot,1)}%</b> entre esos dos años (tendencia ${trend}).`;
-  txt += ` A ${MES[cutMes]} de 2026 lleva <b>${fmt(MM(v26))}</b> MM$`;
-  txt += varH1===null ? '' : `, un <b>${varH1>=0?'+':''}${fmt(varH1,1)}%</b> respecto de igual tramo de 2025`;
-  txt += '.';
-  txt += ley26
-    ? ` La asignación 2026 para este subtítulo es de <b>${fmt(MM(ley26))}</b> MM$, lo que equivale a una ejecución acumulada de <b>${pct(pctEj,1)}</b> a ${MES[cutMes]}.`
-    : ` Este subtítulo no registra asignación explícita en la Ley de Presupuestos 2026.`;
+  // encabezado del subtítulo
+  let head = `Entre 2023 y 2025 este subtítulo devengó <b>${fmt(MM(D.full[2023]))}</b>, <b>${fmt(MM(D.full[2024]))}</b> y <b>${fmt(MM(D.full[2025]))}</b> MM$ (año completo). `;
+  head += `A ${MES[cut].toLowerCase()} de 2026 acumula <b>${fmt(MM(D.h1[2026]))}</b> MM$`;
+  head += D.var2625!==null ? `, un <b>${D.var2625>=0?'+':''}${fmt(D.var2625,1)}%</b> frente a igual tramo de 2025. ` : '. ';
+  // Una asignación simbólica (montos de $10.000, usados como marcador contable) hace que el
+  // porcentaje de ejecución se dispare a cifras sin sentido; en ese caso no se informa el %.
+  const leySignificativa = ley26 >= 1e6;
+  head += ley26
+    ? (leySignificativa
+        ? `La asignación 2026 es de <b>${fmt(MM(ley26))}</b> MM$ y la ejecución acumulada llega a <b>${pct(pctEj,1)}</b>.`
+        : `La asignación 2026 es simbólica (<b>${fmt(ley26/1000,0)}</b> mil pesos), por lo que el porcentaje de ejecución no es informativo: el gasto de esta línea se financia vía modificaciones presupuestarias durante el año.`)
+    : `No registra asignación propia en la Ley de Presupuestos 2026.`;
 
-  return {title: PROG_LABEL[prog].split(' · ')[0]+' · '+lab, text: txt};
+  // conceptos hijos con movimiento
+  const hijos = childrenFor(prog, sub)
+    .map(c=> diagnose(prog, c, false))
+    .filter(d=> ANIOS.some(y=> d.h1[y]!==0))
+    .sort((a,b)=> b.h1[2026]-a.h1[2026] || b.full[2025]-a.full[2025]);
+
+  return {prog, sub, D, head, hijos, ley26};
 }
+
 function subReadings(){
   const host = document.getElementById('subReadings');
   if(SELECTED_SUBS.size===0){
     host.innerHTML = '<div class="subEmpty">Selecciona al menos un subtítulo arriba para ver su análisis.</div>';
     return;
   }
-  const items = [...SELECTED_SUBS].map(k=>{ const [prog,sub]=k.split('|'); return generateSubAnalysis(prog,sub); });
-  host.innerHTML = items.map((it,i)=>
-    `<div class="rd"><div class="n">${String(i+1).padStart(2,'0')}</div><p><b style="font-family:var(--body);font-weight:600">${it.title}.</b> ${it.text}</p></div>`).join('');
+  const bloques = [...SELECTED_SUBS].map(k=>{ const [prog,sub]=k.split('|'); return generateSubAnalysis(prog,sub); });
+
+  host.innerHTML = bloques.map((b,i)=>{
+    const titulo = PROG_LABEL[b.prog].split(' · ')[0]+' · '+subLabel(b.sub);
+
+    let filas;
+    if(!b.hijos.length){
+      filas = `<div class="subEmpty">Este subtítulo no se desagrega en conceptos de nivel de cruce 3 en el informe.</div>`;
+    } else {
+      filas = `<div style="overflow-x:auto"><table class="ddtab">
+        <thead><tr><th>Concepto</th><th>2023</th><th>2024</th><th>2025</th><th>2026</th><th>Var. 26/25</th><th>Lectura</th></tr></thead><tbody>`
+        + b.hijos.map(h=>{
+            const vv = h.var2625;
+            const chip = vv===null ? '<span style="color:var(--faint)">—</span>'
+              : `<span class="chip ${vv>=0?'up':'down'}">${vv>=0?'+':''}${fmt(vv,1)}%</span>`;
+            return `<tr>
+              <td>${conceptLabel(h.code)}</td>
+              <td>${h.h1[2023]?fmt(MM(h.h1[2023])):'<span style="color:var(--faint)">—</span>'}</td>
+              <td>${h.h1[2024]?fmt(MM(h.h1[2024])):'<span style="color:var(--faint)">—</span>'}</td>
+              <td>${h.h1[2025]?fmt(MM(h.h1[2025])):'<span style="color:var(--faint)">—</span>'}</td>
+              <td>${h.h1[2026]?fmt(MM(h.h1[2026])):'<span style="color:var(--faint)">—</span>'}</td>
+              <td>${chip}</td>
+              <td style="font-family:var(--body);text-align:left"><span class="tag t-${h.tipo}">${TIPO_ETIQUETA[h.tipo]}</span></td>
+            </tr>`;
+          }).join('')
+        + `</tbody></table></div>`;
+
+      // comentarios narrativos solo para los casos que ameritan explicación
+      const destacados = b.hijos.filter(h=> ['sostenido','puntual','nuevo','cesado','reversas','erratico'].includes(h.tipo))
+                                .filter(h=> Math.abs(h.h1[2026])>10e6 || Math.abs(h.h1[2025])>10e6)
+                                .slice(0,5);
+      if(destacados.length){
+        filas += '<div class="ddnotes">' + destacados.map(h=>
+          `<p><b>${conceptLabel(h.code)}</b> — ${h.nota}</p>`).join('')
+          + '<p class="ddcaveat">Estas lecturas describen el patrón de la serie, no su causa. El informe SIGFE registra montos, no el motivo del gasto: para atribuir una variación a un cambio normativo, un convenio, una contratación o un hecho puntual hace falta contrastar con los antecedentes administrativos del período.</p>'
+          + '</div>';
+      }
+    }
+
+    return `<div class="ddblock">
+      <div class="ddhead"><span class="n">${String(i+1).padStart(2,'0')}</span><h3>${titulo}</h3></div>
+      <p class="ddintro">${b.head}</p>
+      ${filas}
+    </div>`;
+  }).join('');
 }
 
 /* ---------- render ---------- */
 function render(){
   kpis(); cinta(); estac(); legends(); segYear(); progDetail();
-  asigBarChart('asigP01','yr_asigP01','P01',YEARS_ASIG_P01);
-  asigBarChart('asigP02','yr_asigP02','P02',YEARS_ASIG_P02);
   comp(); tabla(); subPicker(); subReadings();
 }
 
