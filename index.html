@@ -140,6 +140,16 @@ tr.tot td{border-top:2px solid var(--ink);border-bottom:0;font-weight:600;paddin
   color:var(--faint);display:flex;align-items:center;padding:0 2px;
 }
 .subEmpty{font-size:12.5px;color:var(--faint);padding:14px 0 4px}
+.subselect{
+  font-family:var(--body);font-size:13px;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:5px;
+  padding:7px 30px 7px 11px;cursor:pointer;max-width:100%;min-width:260px;
+  appearance:none;-webkit-appearance:none;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns=%27http://www.w3.org/2000/svg%27 width=%2710%27 height=%277%27><path d=%27M1 1l4 4 4-4%27 fill=%27none%27 stroke=%27%235E6D7C%27 stroke-width=%271.4%27/></svg>");
+  background-repeat:no-repeat;background-position:right 11px center;
+}
+.subselect:hover{border-color:var(--faint)}
+.subselect:focus-visible{outline:2px solid var(--com);outline-offset:-1px}
 .howto{font-size:11.5px;line-height:1.5;color:var(--muted);margin:2px 0 8px}
 .howto b{font-weight:600;color:var(--ink)}
 
@@ -274,7 +284,7 @@ footer{margin-top:26px;padding-top:12px;border-top:1px solid var(--line);
   <section class="panel">
     <div class="phead">
       <h2>Subtítulos y asignación presupuestaria por programa</h2>
-      <div class="note">Elige los años a comparar y, dentro de cada programa, hasta 10 subtítulos. Por cada uno, se despliegan automáticamente sus conceptos de nivel de cruce 3 (cuando existen). Asignación = Ley de Presupuestos inicial del último año seleccionado (— cuando el concepto no tiene asignación propia). Devengado acumulado a diciembre o al corte elegido arriba.</div>
+      <div class="note">Elige los años a comparar y, dentro de cada programa, un subtítulo desde la lista desplegable. Se despliegan automáticamente sus conceptos de nivel de cruce 3 (cuando existen). Asignación = Ley de Presupuestos inicial del último año seleccionado (— cuando el concepto no tiene asignación propia). Devengado acumulado a diciembre o al corte elegido arriba.</div>
     </div>
     <div class="yctl"><span>Años a comparar</span><div class="seg" id="segYear"></div></div>
     <div class="stack" id="progDetail"></div>
@@ -769,38 +779,35 @@ function childrenFor(prog, subCode){
   return itemCatalog(prog).c3.filter(c=>c.slice(0,2)===prefix);
 }
 
-const MAX_ITEMS = 10;
-let SELECTED_ITEMS = {P01: new Set(), P02: new Set()};
-let ITEMS_INIT = {P01:false, P02:false};
+let SELECTED_SUB = {P01: null, P02: null}; // un subtítulo por programa
+let SUB_INIT = {P01:false, P02:false};
 
 function ensureDefaultItems(prog){
-  if(ITEMS_INIT[prog]) return;
-  ITEMS_INIT[prog] = true;
-  // por defecto, parte mostrando los subtítulos del programa (comportamiento original)
-  itemCatalog(prog).subs.forEach(s=>{ if(SELECTED_ITEMS[prog].size<MAX_ITEMS) SELECTED_ITEMS[prog].add(s); });
+  if(SUB_INIT[prog]) return;
+  SUB_INIT[prog] = true;
+  // por defecto, el primer subtítulo del programa
+  const subs = itemCatalog(prog).subs;
+  if(subs.length) SELECTED_SUB[prog] = subs[0];
 }
 
 function itemPicker(prog, containerId){
   const cat = itemCatalog(prog);
   const host = document.getElementById(containerId);
   host.innerHTML = '';
-  const sel = SELECTED_ITEMS[prog];
-
-  const g = document.createElement('span'); g.className='grp'; g.textContent = 'Subtítulos';
-  host.appendChild(g);
+  const sel = document.createElement('select');
+  sel.className = 'subselect';
   cat.subs.forEach(code=>{
-    const b = document.createElement('button');
-    b.textContent = conceptLabel(code);
-    b.setAttribute('aria-pressed', sel.has(code) ? 'true':'false');
-    if(!sel.has(code) && sel.size>=MAX_ITEMS) b.disabled = true;
-    b.addEventListener('click', ()=>{
-      if(sel.has(code)){ sel.delete(code); }
-      else { if(sel.size>=MAX_ITEMS) return; sel.add(code); }
-      itemPicker(prog, containerId);
-      progDetail();
-    });
-    host.appendChild(b);
+    const opt = document.createElement('option');
+    opt.value = code;
+    opt.textContent = conceptLabel(code);
+    if(code===SELECTED_SUB[prog]) opt.selected = true;
+    sel.appendChild(opt);
   });
+  sel.addEventListener('change', ()=>{
+    SELECTED_SUB[prog] = sel.value;
+    progDetail();
+  });
+  host.appendChild(sel);
 }
 
 function progDetail(){
@@ -814,26 +821,25 @@ function progDetail(){
     const leyByY = {}, devByY = {};
     years.forEach(y=>{ leyByY[y]=combinedLeyFor(prog,y); devByY[y]=combinedDevFor(prog,y); });
 
-    // subtítulos elegidos, con datos en algún año seleccionado
-    const chosenSubs = [...SELECTED_ITEMS[prog]]
-      .filter(s=> years.some(y=> (leyByY[y][s]||0)>0 || (devByY[y][s]?.dev||0)>0))
-      .sort((a,b)=> (leyByY[lastY][b]||0)-(leyByY[lastY][a]||0) || (devByY[lastY][b]?.dev||0)-(devByY[lastY][a]?.dev||0));
+    // un único subtítulo elegido, si tiene datos en algún año seleccionado
+    const subCode = SELECTED_SUB[prog];
+    const subActivo = subCode && years.some(y=> (leyByY[y][subCode]||0)>0 || (devByY[y][subCode]?.dev||0)>0);
 
-    // por cada subtítulo elegido, se despliegan automáticamente sus conceptos de nivel de cruce 3
+    // el subtítulo elegido despliega automáticamente sus conceptos de nivel de cruce 3
     const items = [];
     const childSet = new Set();
-    chosenSubs.forEach(subCode=>{
+    if(subActivo){
       items.push(subCode);
       const children = childrenFor(prog, subCode)
         .filter(c=> years.some(y=> (leyByY[y][c]||0)>0 || (devByY[y][c]?.dev||0)>0))
         .sort((a,b)=> (devByY[lastY][b]?.dev||0)-(devByY[lastY][a]?.dev||0));
       children.forEach(c=>{ items.push(c); childSet.add(c); });
-    });
+    }
     const itemLabel = code => (childSet.has(code)? '↳ ' : '')+conceptLabel(code);
 
-    // los totales se calculan solo sobre los subtítulos (los conceptos son su propio desglose, no se suman aparte)
-    const totLey = chosenSubs.reduce((t,s)=>t+(leyByY[lastY][s]||0),0);
-    const totDev = chosenSubs.reduce((t,s)=>t+(devByY[lastY][s]?.dev||0),0);
+    // los totales se calculan solo sobre el subtítulo (los conceptos son su propio desglose, no se suman aparte)
+    const totLey = subActivo ? (leyByY[lastY][subCode]||0) : 0;
+    const totDev = subActivo ? (devByY[lastY][subCode]?.dev||0) : 0;
     const totPct = totLey? totDev/totLey*100 : 0;
     const pickId = 'itemPicker_'+prog;
 
@@ -842,7 +848,7 @@ function progDetail(){
     panel.innerHTML = `
       <div class="phead">
         <h2>${PROG_LABEL[prog]}</h2>
-        <div class="note">${SELECTED_ITEMS[prog].size}/${MAX_ITEMS} subtítulos seleccionados · cada uno despliega automáticamente sus conceptos de nivel de cruce 3 · asignación ${lastY}: <b style="color:var(--ink);font-family:var(--mono)">${fmt(MM(totLey))} MM$</b> · ejecutado ${totLey?pct(totPct,1):'—'}</div>
+        <div class="note">Elige un subtítulo; se despliegan automáticamente sus conceptos de nivel de cruce 3 · asignación ${lastY}: <b style="color:var(--ink);font-family:var(--mono)">${fmt(MM(totLey))} MM$</b> · ejecutado ${totLey?pct(totPct,1):'—'}</div>
       </div>
       <div class="subpicker" id="${pickId}" style="margin-bottom:10px"></div>
       ${items.length ? `
@@ -850,7 +856,7 @@ function progDetail(){
         <div class="howto">Una barra por año en cada fila: su largo es el <b>devengado acumulado</b> en millones de pesos. La línea punteada vertical marca la <b>asignación</b> del año más reciente; el tramo rojo, si aparece, es el devengo que la excede.</div>
         <div class="chart-scroll"><svg class="chart" id="bar_${prog}"></svg></div>
         <div style="overflow-x:auto"><table id="tab_${prog}"></table></div>`
-      : '<div class="subEmpty">Selecciona al menos un subtítulo arriba.</div>'}`;
+      : '<div class="subEmpty">El subtítulo elegido no registra movimiento en los años seleccionados.</div>'}`;
     host.appendChild(panel);
 
     itemPicker(prog, pickId);
